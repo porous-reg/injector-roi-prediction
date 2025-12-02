@@ -1,0 +1,60 @@
+Pressure_bar,ET_us,Start_Delay_ms,End_Delay_ms,Injection_Mass_mg,File_Path
+100,250,,,1.33076373914291,.\100bar\250us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,300,,,1.65879590196712,.\100bar\300us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,350,,,1.73542617695682,.\100bar\350us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,400,,,3.0062585989668,.\100bar\400us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,450,,,3.1387850634571,.\100bar\450us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,500,,,4.04240529550296,.\100bar\500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,550,,,4.36394190090393,.\100bar\550us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,600,,,4.85700655824137,.\100bar\600us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,650,,,5.28845534201864,.\100bar\650us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,700,,,5.6192478077734,.\100bar\700us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,800,,,6.5985598958466,.\100bar\800us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,900,,,7.52756521151806,.\100bar\900us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,1000,,,8.54114126414855,.\100bar\1000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,1500,,,12.9455443201089,.\100bar\1500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,2000,,,17.4363238838264,.\100bar\2000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,3000,,,26.6795463331637,.\100bar\3000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,4000,,,36.5733582495835,.\100bar\4000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+100,5000,,,47.3832453866771,.\100bar\5000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,250,,,1.37431238016219,.\200bar\250us\Data_002_BCswap_Czero_fftSmooth_shifted.lvm
+200,300,,,2.4306567450021,.\200bar\300us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,350,,,2.70749987782336,.\200bar\350us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,400,,,3.91117952761113,.\200bar\400us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,450,,,4.24828113737375,.\200bar\450us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,500,,,5.16938166187968,.\200bar\500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,550,,,5.84042244709028,.\200bar\550us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,600,,,6.38931421460702,.\200bar\600us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,650,,,7.11021909941161,.\200bar\650us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,700,,,7.68671014378485,.\200bar\700us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,800,,,9.02709033453285,.\200bar\800us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,900,,,10.166643512395,.\200bar\900us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,1000,,,11.6418149273598,.\200bar\1000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,1500,,,18.3612044671811,.\200bar\1500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,2000,,,25.395373114691,.\200bar\2000us\Data_002_BCswap_Czero_fftSmooth_shifted.lvm
+200,3000,,,38.9093831872082,.\200bar\3000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,4000,,,54.3817534559661,.\200bar\4000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+200,5000,,,68.8645372033388,.\200bar\5000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,250,,,1.64859972772537,.\300bar\250us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,300,,,2.34260738986567,.\300bar\300us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,300,,,2.34260738986567,.\300bar - 복사본\300us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,350,,,3.11805852555922,.\300bar\350us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,400,,,4.23436581213734,.\300bar\400us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,450,,,5.13246070718296,.\300bar\450us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,500,,,5.74399582526581,.\300bar\500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,550,,,6.90589062107414,.\300bar\550us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,600,,,7.71842478303552,.\300bar\600us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,600,,,7.71842478303552,.\300bar - 복사본\600us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,650,,,8.34737383233872,.\300bar\650us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,700,,,9.2537456440553,.\300bar\700us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,800,,,10.9403021669494,.\300bar\800us\Data_002_BCswap_Czero_fftSmooth_shifted.lvm
+300,900,,,12.4932587225962,.\300bar\900us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,900,,,12.4932587225962,.\300bar - 복사본\900us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,1000,,,14.1919273634976,.\300bar\1000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,1500,,,22.7918821275729,.\300bar\1500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,1500,,,22.7918821275729,.\300bar - 복사본\1500us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,2000,,,31.7935448041061,.\300bar\2000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,2000,,,31.7935448041061,.\300bar - 복사본\2000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,3000,,,50.0076505863665,.\300bar\3000us\Data_005_BCswap_Czero_fftSmooth_shifted.lvm
+300,4000,,,68.9683836925174,.\300bar\4000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
+300,5000,,,86.9067397619271,.\300bar\5000us\Data_001_BCswap_Czero_fftSmooth_shifted.lvm
