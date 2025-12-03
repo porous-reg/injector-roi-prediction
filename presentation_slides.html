@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인젝터 분사율 측정 및 AI 예측 모델링</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            /* Deep Blue */
+            --secondary-color: #004494;
+            --accent-color: #e6f0ff;
+            --text-color: #333;
+            --bg-color: #ffffff;
+            --slide-width: 1280px;
+            --slide-height: 720px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #presentation-container {
+            width: var(--slide-width);
+            height: var(--slide-height);
+            background-color: var(--bg-color);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            flex-direction: column;
+            padding: 60px 80px;
+            box-sizing: border-box;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Slide Header */
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 15px;
+            width: 100%;
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        /* Content Styling */
+        .content {
+            flex: 1;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        ul {
+            list-style-type: disc;
+            padding-left: 40px;
+        }
+
+        li {
+            margin-bottom: 15px;
+        }
+
+        strong {
+            color: var(--primary-color);
+        }
+
+        /* Title Slide Specifics */
+        .slide.title-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, #ffffff 0%, #e6f0ff 100%);
+        }
+
+        .title-slide h1 {
+            font-size: 3.5rem;
+            border-bottom: none;
+            margin-bottom: 20px;
+        }
+
+        .title-slide h2 {
+            font-size: 2rem;
+            color: #555;
+            font-weight: normal;
+        }
+
+        .title-slide .date {
+            margin-top: 40px;
+            font-size: 1.2rem;
+            color: #777;
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Image Placeholder */
+        .image-placeholder {
+            width: 100%;
+            height: 350px;
+            background-color: #eee;
+            border: 2px dashed var(--primary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #777;
+            font-size: 1.5rem;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 1rem;
+            color: #777;
+        }
+
+        .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="presentation-container">
+        <!-- Slide 1: Title -->
+        <div class="slide title-slide active">
+            <h1>인젝터 분사율 측정 및<br>AI 기반 분사량 예측 모델링</h1>
+            <h2>Bosch 방식을 이용한 Peak & Hold 인젝터 분사 특성 분석</h2>
+            <div class="date">2024. 11. 24</div>
+        </div>
+
+        <!-- Slide 2: Introduction -->
+        <div class="slide">
+            <h1>1. 서론 (Introduction)</h1>
+            <div class="content">
+                <ul>
+                    <li><strong>연구 배경:</strong> 배기 규제 강화 및 연비 향상을 위한 정밀한 연료 분사 제어 필요성 증대. 다단 분사 전략 구현을 위해
+                        <strong>분사율(ROI)</strong> 및 <strong>총 분사량</strong> 예측 필수.</li>
+                    <li><strong>연구 목적:</strong>
+                        <ul>
+                            <li>Bosch Tube Method를 이용한 분사율 측정</li>
+                            <li>분사량 예측을 위한 최적의 <strong>회귀 모델</strong> 개발</li>
+                            <li>전류 신호 기반 분사율 파형 예측 <strong>Deep Learning 가상 센서</strong> 구현</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 3: Experimental Setup -->
+        <div class="slide">
+            <h1>2. 실험 장치 및 방법</h1>
+            <div class="content">
+                <ul>
+                    <li><strong>Bosch 측정 원리:</strong> 배관 내 압력 파동(<span class="math">P</span>)을 측정하여 분사율(<span
+                            class="math">dq/dt</span>) 계산
+                        <br><br>
+                        <center><span class="math">dq/dt = (A / a) · P</span></center>
+                    </li>
+                    <li><strong>실험 조건:</strong>
+                        <ul>
+                            <li><strong>인젝터:</strong> Peak & Hold 제어 방식</li>
+                            <li><strong>레일 압력:</strong> 100 ~ 350 bar (50 bar 단위)</li>
+                            <li><strong>통전 시간 (ET):</strong> 250 ~ 5000 us (Sweep)</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 4: Data Processing -->
+        <div class="slide">
+            <h1>3. 데이터 처리 프로세스</h1>
+            <div class="content">
+                <p>정확한 분사율 도출을 위한 4단계 파이프라인:</p>
+                <ol>
+                    <li><strong>Raw Data Acquisition:</strong> 압력, 전류, TTL 신호 측정</li>
+                    <li><strong>BCswap & Zero Correction:</strong> 채널 보정 및 오프셋 제거</li>
+                    <li><strong>FFT Smoothing (Hybrid Filtering):</strong>
+                        <ul>
+                            <li>Transient: Weak Filter (10kHz) - 응답성 확보</li>
+                            <li>Steady-state: Strong Filter (3kHz) - 노이즈 제거</li>
+                        </ul>
+                    </li>
+                    <li><strong>Time Shifting:</strong> TTL Trigger 기준 시간축 정렬</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Slide 5: Mass Estimation Results -->
+        <div class="slide">
+            <h1>4. 총 분사량 예측 결과</h1>
+            <div class="content">
+                <ul>
+                    <li><strong>모델 비교:</strong> Linear Regression vs Random Forest vs Polynomial Regression</li>
+                    <li><strong>최적 모델: Polynomial Regression (2nd)</strong>
+                        <ul>
+                            <li><strong>R² Score: 0.9997</strong> (매우 높은 정확도)</li>
+                            <li>RMSE: 0.3545 mg</li>
+                        </ul>
+                    </li>
+                    <li><strong>물리적 근거:</strong> 베르누이 방정식 및 오리피스 유동 특성상 압력과 유량은 <strong>2차 함수 관계</strong>를 따름.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 6: Waveform Prediction Models -->
+        <div class="slide">
+            <h1>5. 분사율 파형 예측 모델</h1>
+            <div class="content">
+                <ul>
+                    <li><strong>LSTM (Long Short-Term Memory):</strong>
+                        <ul>
+                            <li>시계열 데이터 학습에 강점, 안정적이고 균형 잡힌 성능.</li>
+                        </ul>
+                    </li>
+                    <li><strong>TRM (Transformer):</strong>
+                        <ul>
+                            <li>Attention 메커니즘, 병렬 처리 가능.</li>
+                            <li><strong>가장 우수한 형상 복원력</strong> 및 빠른 추론 속도.</li>
+                        </ul>
+                    </li>
+                    <li><strong>HRM (Hybrid Recursive Model):</strong>
+                        <ul>
+                            <li>LSTM + Transformer 결합, 복잡도 높음.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 7: Model Performance Comparison -->
+        <div class="slide">
+            <h1>6. 모델 성능 비교</h1>
+            <div class="content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>모델</th>
+                            <th>R² Score (Shape)</th>
+                            <th>RMSE %</th>
+                            <th>Mass Error (Hybrid 적용 후)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>LSTM</td>
+                            <td>0.99359</td>
+                            <td>1.78%</td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TRM</strong></td>
+                            <td><strong>0.99686</strong></td>
+                            <td><strong>1.24%</strong></td>
+                            <td><strong>0.00%</strong></td>
+                        </tr>
+                        <tr>
+                            <td>HRM</td>
+                            <td>0.99131</td>
+                            <td>2.07%</td>
+                            <td>10.51%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 20px; font-size: 1.2rem;">
+                    * <strong>TRM 모델</strong>이 형상 정확도(R²)와 오차(RMSE) 면에서 가장 우수함.<br>
+                    * Hybrid Algorithm 적용 시 TRM과 LSTM은 Mass Error가 완전히 제거됨.
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 8: TRM Model Output Example -->
+        <div class="slide">
+            <h1>7. TRM 모델 출력값 예시</h1>
+            <div class="content">
+                <div class="image-placeholder" style="background-color: white; border: none;">
+                    <img src="output_TRM.png" alt="TRM Model Output"
+                        style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                </div>
+                <ul>
+                    <li><strong>특징:</strong> 실제 파형과 거의 일치하는 높은 형상 복원력.</li>
+                    <li><strong>R² Score:</strong> 0.99686</li>
+                    <li><strong>Hybrid Algorithm:</strong> 총 분사량 오차 0.00% 달성.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 9: LSTM Model Output Example -->
+        <div class="slide">
+            <h1>8. LSTM 모델 출력값 예시</h1>
+            <div class="content">
+                <div class="image-placeholder" style="background-color: white; border: none;">
+                    <img src="output_LSTM.png" alt="LSTM Model Output"
+                        style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                </div>
+                <ul>
+                    <li><strong>특징:</strong> 안정적이고 균형 잡힌 예측 성능.</li>
+                    <li><strong>R² Score:</strong> 0.99359</li>
+                    <li><strong>활용:</strong> 실용적인 어플리케이션에 적합.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 10: Conclusion -->
+        <div class="slide">
+            <h1>9. 결론 (Conclusion)</h1>
+            <div class="content">
+                <ol>
+                    <li><strong>분사량 예측:</strong> 물리적 특성을 반영한 <strong>Polynomial Regression</strong>이 최적 ($R^2=0.9997$).
+                    </li>
+                    <li><strong>파형 예측:</strong> <strong>TRM 모델</strong>이 형상 복원 및 정확도 면에서 가장 우수.</li>
+                    <li><strong>Hybrid Algorithm:</strong> 딥러닝 예측값에 물리적 모델(Polynomial)의 총량을 보정하여 <strong>Mass Error를 0%로
+                            제거</strong>하는 성과 확인.</li>
+                    <li><strong>성과:</strong> 고해상도 가상 분사량 맵(Virtual Lookup Table) 생성 완료 및 ECU 캘리브레이션 활용 가능성 확보.</li>
+                </ol>
+
+                <div
+                    style="margin-top: 30px; padding: 20px; background-color: #e6f0ff; border-radius: 10px; font-size: 1.1rem;">
+                    <h3 style="margin-top: 0; color: var(--primary-color); font-size: 1.3rem; margin-bottom: 15px;">🚀
+                        데모 프로그램 (Streamlit)</h3>
+                    <ul style="list-style: none; padding-left: 0;">
+                        <li style="margin-bottom: 10px;">
+                            <strong>TRM 모델 예시:</strong> <a
+                                href="https://injector-roi-prediction-adpyovq9jr9bxy77xbabxv.streamlit.app/"
+                                target="_blank"
+                                style="color: var(--secondary-color);">https://injector-roi-prediction-adpyovq9jr9bxy77xbabxv.streamlit.app/</a>
+                        </li>
+                        <li>
+                            <strong>LSTM 모델 예시:</strong> <a
+                                href="https://injector-roi-prediction-ykjydpobrap5fchgkexi6n.streamlit.app/"
+                                target="_blank"
+                                style="color: var(--secondary-color);">https://injector-roi-prediction-ykjydpobrap5fchgkexi6n.streamlit.app/</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="controls">
+            <button id="prevBtn" onclick="changeSlide(-1)" disabled>이전</button>
+            <button id="nextBtn" onclick="changeSlide(1)">다음</button>
+        </div>
+        <div class="page-number" id="pageNumber">1 / 10</div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const pageNumber = document.getElementById('pageNumber');
+
+        function updateButtons() {
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+            pageNumber.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        }
+
+        function changeSlide(direction) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide += direction;
+            if (currentSlide < 0) currentSlide = 0;
+            if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+            slides[currentSlide].classList.add('active');
+            updateButtons();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Space') {
+                if (currentSlide < totalSlides - 1) changeSlide(1);
+            } else if (e.key === 'ArrowLeft') {
+                if (currentSlide > 0) changeSlide(-1);
+            }
+        });
+
+        updateButtons();
+    </script>
+
+</body>
+
+</html>
