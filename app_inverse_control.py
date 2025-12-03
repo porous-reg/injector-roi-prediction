@@ -22,6 +22,55 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+class CurrentWaveformPredictor(nn.Module):
+    """ET로부터 전류 파형을 예측하는 DNN 모델"""
+    def __init__(self, input_size=1, hidden_size1=256, hidden_size2=512, output_seq_len=1300, num_layers=3):
+        super(CurrentWaveformPredictor, self).__init__()
+        self.output_seq_len = output_seq_len
+        
+        # Input layer: ET (1) -> hidden_size1
+        self.fc1 = nn.Linear(input_size, hidden_size1)
+        
+        if num_layers == 3:
+            # Hidden layer 1: hidden_size1 -> hidden_size2
+            self.fc2 = nn.Linear(hidden_size1, hidden_size2)
+            # Hidden layer 2: hidden_size2 -> hidden_size2
+            self.fc3 = nn.Linear(hidden_size2, hidden_size2)
+            # Output layer: hidden_size2 -> 1300
+            self.fc_out = nn.Linear(hidden_size2, output_seq_len)
+        else:
+            # 2 layers: hidden_size1 -> output_seq_len
+            self.fc2 = None
+            self.fc3 = None
+            self.fc_out = nn.Linear(hidden_size1, output_seq_len)
+        
+        self.num_layers = num_layers
+        self.dropout = nn.Dropout(0.2)
+        self.activation = nn.GELU()  # GELU activation function
+        
+    def forward(self, x):
+        # x: (batch_size, 1) -> [ET]
+        
+        # Input layer with activation
+        x = self.fc1(x)
+        x = self.activation(x)  # Activation: GELU
+        x = self.dropout(x)
+        
+        if self.num_layers == 3:
+            # Hidden layer 1 with activation
+            x = self.fc2(x)
+            x = self.activation(x)  # Activation: GELU
+            x = self.dropout(x)
+            
+            # Hidden layer 2 with activation
+            x = self.fc3(x)
+            x = self.activation(x)  # Activation: GELU
+            x = self.dropout(x)
+        
+        # Output layer: directly output 1300 points (no activation for regression)
+        out = self.fc_out(x)
+        return out
+
 class InjectorLSTM(nn.Module):
     def __init__(self, input_size=2, hidden_size1=64, hidden_size2=32, output_size=1):
         super(InjectorLSTM, self).__init__()
@@ -42,23 +91,60 @@ def load_resources():
         lstm_model = InjectorLSTM().to(device)
         lstm_model.load_state_dict(torch.load('lstm_model.pth', map_location=device))
         lstm_model.eval()
+        
+        # 전류 파형 예측 모델 로드 (선택적)
+        current_model = None
+        current_scaler_X = None
+        current_scaler_y = None
+        try:
+            current_model = CurrentWaveformPredictor(input_size=1, hidden_size1=256, hidden_size2=512, output_seq_len=1300, num_layers=3).to(device)
+            current_model.load_state_dict(torch.load('current_waveform_model.pth', map_location=device))
+            current_model.eval()
+            current_scaler_X = joblib.load('current_scaler_X.pkl')
+            current_scaler_y = joblib.load('current_scaler_y.pkl')
+        except:
+            pass  # 전류 모델이 없어도 앱은 동작해야 함
+        
         scaler_X = joblib.load('scaler_X.pkl')
         scaler_y = joblib.load('scaler_y.pkl')
         reg_model = joblib.load('final_injector_model.pkl')
         poly = joblib.load('poly_feature_transformer.pkl')
-        return lstm_model, scaler_X, scaler_y, reg_model, poly, True
+        return lstm_model, scaler_X, scaler_y, reg_model, poly, current_model, current_scaler_X, current_scaler_y, True
     except:
-        return None, None, None, None, None, False
+        return None, None, None, None, None, None, None, None, False
 
-lstm_model, scaler_X, scaler_y, reg_model, poly, loaded = load_resources()
+lstm_model, scaler_X, scaler_y, reg_model, poly, current_model, current_scaler_X, current_scaler_y, loaded = load_resources()
 
 # ---------------------------------------------------------
 # [핵심 함수] AI 기반 시뮬레이터 (Forward Model)
 # ---------------------------------------------------------
-def run_simulation(pressure, duration_us):
-    # 1. 전류 파형 생성 (Peak -> Direct Drop -> Hold -> Hysteresis)
-    # [수정됨] 사용자 피드백 반영: Peak -> Direct Drop -> Hold -> Hysteresis
-    time = np.linspace(-0.5, 6.0, 1300)
+def predict_current_waveform(duration_us, total_points=1300):
+    """AI 모델을 사용하여 ET로부터 전류 파형 예측"""
+    if current_model is None or current_scaler_X is None or current_scaler_y is None:
+        return None, None
+    
+    try:
+        device = torch.device('cpu')
+        # 입력 데이터 준비 (ET만 사용)
+        input_meta = np.array([[duration_us]])  # (1, 1)
+        input_scaled = current_scaler_X.transform(input_meta)
+        input_tensor = torch.tensor(input_scaled, dtype=torch.float32).to(device)
+        
+        with torch.no_grad():
+            output_tensor = current_model(input_tensor)
+        
+        output_scaled = output_tensor.cpu().numpy()
+        output_unscaled = current_scaler_y.inverse_transform(output_scaled.reshape(-1, 1)).reshape(output_scaled.shape)
+        current_waveform = np.maximum(output_unscaled[0], 0)
+        
+        time_axis = np.linspace(-0.5, 6.0, total_points)
+        return time_axis, current_waveform
+    except Exception as e:
+        return None, None
+
+def generate_manual_waveform(duration_us, total_points=1300):
+    """수동 시뮬레이션 전류 파형 생성"""
+    time = np.linspace(-0.5, 6.0, total_points)
     current = np.zeros_like(time)
     
     t_start = 0.0
@@ -126,6 +212,17 @@ def run_simulation(pressure, duration_us):
                 current[i] = 0
                 
     current_wave = np.maximum(current, 0)
+    return time, current_wave
+
+def run_simulation(pressure, duration_us, use_ai_prediction=False):
+    # 1. 전류 파형 생성
+    if use_ai_prediction:
+        time, current_wave = predict_current_waveform(duration_us)
+        if current_wave is None:
+            # Fallback to manual simulation
+            time, current_wave = generate_manual_waveform(duration_us)
+    else:
+        time, current_wave = generate_manual_waveform(duration_us)
     
     # 2. AI 추론 (LSTM)
     p_wave = np.full_like(current_wave, pressure)
@@ -148,7 +245,7 @@ def run_simulation(pressure, duration_us):
 # ---------------------------------------------------------
 # [핵심 로직] 역방향 솔버 (Inverse Solver)
 # ---------------------------------------------------------
-def solve_for_duration(target_mass, pressure):
+def solve_for_duration(target_mass, pressure, use_ai_prediction=False):
     # 이진 탐색 (Binary Search) 범위 설정
     low, high = 250, 6000 # us
     best_duration = 0
@@ -158,7 +255,7 @@ def solve_for_duration(target_mass, pressure):
     # 10번만 반복해도 오차 0.1% 이내로 수렴함
     for _ in range(15):
         mid = (low + high) / 2
-        _, _, _, mass_pred = run_simulation(pressure, mid)
+        _, _, _, mass_pred = run_simulation(pressure, mid, use_ai_prediction)
         
         error = mass_pred - target_mass
         
@@ -186,6 +283,20 @@ if not loaded:
     st.error("Model files not found.")
     st.stop()
 
+# 전류 파형 생성 방식 선택
+st.sidebar.header("⚙️ Current Waveform Source")
+current_source = st.sidebar.radio(
+    "Select Current Generation Method",
+    ["AI Prediction (ET → Current)", "Manual Simulation (Hysteresis)"],
+    help="AI Prediction: 학습된 모델로 실제 전류 파형 예측 | Manual: 수동 시뮬레이션 파형"
+)
+
+use_ai_for_current = (current_source == "AI Prediction (ET → Current)")
+
+if use_ai_for_current and (current_model is None or current_scaler_X is None or current_scaler_y is None):
+    st.sidebar.warning("⚠️ 전류 파형 예측 모델이 없습니다. Manual Simulation 모드로 전환됩니다.")
+    use_ai_for_current = False
+
 # 탭 구성
 tab1, tab2 = st.tabs(["🎮 Forward Control (Manual)", "🎯 Inverse Control (Auto)"])
 
@@ -197,7 +308,7 @@ with tab1:
     with col_b:
         d_manual = st.slider("Energizing Time (us)", 250, 5000, 1500, 50, key="d1")
         
-    t, i, roi, mass = run_simulation(p_manual, d_manual)
+    t, i, roi, mass = run_simulation(p_manual, d_manual, use_ai_for_current)
     
     st.metric("Predicted Mass", f"{mass:.2f} mg")
     
@@ -222,10 +333,10 @@ with tab2:
     if st.button("🚀 Calculate Control Parameters"):
         with st.spinner("AI is optimizing control parameters..."):
             # 솔버 실행
-            opt_duration, iters = solve_for_duration(target_m, target_p)
+            opt_duration, iters = solve_for_duration(target_m, target_p, use_ai_for_current)
             
             # 결과 시뮬레이션
-            t_opt, i_opt, roi_opt, mass_opt = run_simulation(target_p, opt_duration)
+            t_opt, i_opt, roi_opt, mass_opt = run_simulation(target_p, opt_duration, use_ai_for_current)
             
             # 결과 표시
             st.success(f" Optimization Complete! (Converged in {iters} iterations)")

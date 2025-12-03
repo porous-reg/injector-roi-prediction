@@ -62,6 +62,55 @@ class TinyTransformerBlock(nn.Module):
         x = self.norm2(x + ff_out)
         return x
 
+class CurrentWaveformPredictor(nn.Module):
+    """ET로부터 전류 파형을 예측하는 DNN 모델"""
+    def __init__(self, input_size=1, hidden_size1=256, hidden_size2=512, output_seq_len=1300, num_layers=3):
+        super(CurrentWaveformPredictor, self).__init__()
+        self.output_seq_len = output_seq_len
+        
+        # Input layer: ET (1) -> hidden_size1
+        self.fc1 = nn.Linear(input_size, hidden_size1)
+        
+        if num_layers == 3:
+            # Hidden layer 1: hidden_size1 -> hidden_size2
+            self.fc2 = nn.Linear(hidden_size1, hidden_size2)
+            # Hidden layer 2: hidden_size2 -> hidden_size2
+            self.fc3 = nn.Linear(hidden_size2, hidden_size2)
+            # Output layer: hidden_size2 -> 1300
+            self.fc_out = nn.Linear(hidden_size2, output_seq_len)
+        else:
+            # 2 layers: hidden_size1 -> output_seq_len
+            self.fc2 = None
+            self.fc3 = None
+            self.fc_out = nn.Linear(hidden_size1, output_seq_len)
+        
+        self.num_layers = num_layers
+        self.dropout = nn.Dropout(0.2)
+        self.activation = nn.GELU()  # GELU activation function
+        
+    def forward(self, x):
+        # x: (batch_size, 1) -> [ET]
+        
+        # Input layer with activation
+        x = self.fc1(x)
+        x = self.activation(x)  # Activation: GELU
+        x = self.dropout(x)
+        
+        if self.num_layers == 3:
+            # Hidden layer 1 with activation
+            x = self.fc2(x)
+            x = self.activation(x)  # Activation: GELU
+            x = self.dropout(x)
+            
+            # Hidden layer 2 with activation
+            x = self.fc3(x)
+            x = self.activation(x)  # Activation: GELU
+            x = self.dropout(x)
+        
+        # Output layer: directly output 1300 points (no activation for regression)
+        out = self.fc_out(x)
+        return out
+
 class InjectorTRM(nn.Module):
     """Tiny Recursive Model (Transformer-based) for Injector ROI Prediction"""
     def __init__(self, input_size=2, d_model=64, nhead=4, num_layers=2, 

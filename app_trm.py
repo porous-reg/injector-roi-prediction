@@ -70,6 +70,55 @@ class TinyTransformerBlock(nn.Module):
         
         return x
 
+class CurrentWaveformPredictor(nn.Module):
+    """ET로부터 전류 파형을 예측하는 DNN 모델"""
+    def __init__(self, input_size=1, hidden_size1=256, hidden_size2=512, output_seq_len=1300, num_layers=3):
+        super(CurrentWaveformPredictor, self).__init__()
+        self.output_seq_len = output_seq_len
+        
+        # Input layer: ET (1) -> hidden_size1
+        self.fc1 = nn.Linear(input_size, hidden_size1)
+        
+        if num_layers == 3:
+            # Hidden layer 1: hidden_size1 -> hidden_size2
+            self.fc2 = nn.Linear(hidden_size1, hidden_size2)
+            # Hidden layer 2: hidden_size2 -> hidden_size2
+            self.fc3 = nn.Linear(hidden_size2, hidden_size2)
+            # Output layer: hidden_size2 -> 1300
+            self.fc_out = nn.Linear(hidden_size2, output_seq_len)
+        else:
+            # 2 layers: hidden_size1 -> output_seq_len
+            self.fc2 = None
+            self.fc3 = None
+            self.fc_out = nn.Linear(hidden_size1, output_seq_len)
+        
+        self.num_layers = num_layers
+        self.dropout = nn.Dropout(0.2)
+        self.activation = nn.GELU()  # GELU activation function
+        
+    def forward(self, x):
+        # x: (batch_size, 1) -> [ET]
+        
+        # Input layer with activation
+        x = self.fc1(x)
+        x = self.activation(x)  # Activation: GELU
+        x = self.dropout(x)
+        
+        if self.num_layers == 3:
+            # Hidden layer 1 with activation
+            x = self.fc2(x)
+            x = self.activation(x)  # Activation: GELU
+            x = self.dropout(x)
+            
+            # Hidden layer 2 with activation
+            x = self.fc3(x)
+            x = self.activation(x)  # Activation: GELU
+            x = self.dropout(x)
+        
+        # Output layer: directly output 1300 points (no activation for regression)
+        out = self.fc_out(x)
+        return out
+
 class InjectorTRM(nn.Module):
     """Tiny Recursive Model (Transformer-based) for Injector ROI Prediction"""
     def __init__(self, input_size=2, d_model=64, nhead=4, num_layers=2, 
@@ -128,22 +177,64 @@ def load_resources():
         trm_model.load_state_dict(torch.load('trm_model.pth', map_location=device))
         trm_model.eval()
         
+        # 전류 파형 예측 모델 로드 (선택적)
+        current_model = None
+        current_scaler_X = None
+        current_scaler_y = None
+        try:
+            current_model = CurrentWaveformPredictor(input_size=1, hidden_size1=256, hidden_size2=512, output_seq_len=1300, num_layers=3).to(device)
+            current_model.load_state_dict(torch.load('current_waveform_model.pth', map_location=device))
+            current_model.eval()
+            current_scaler_X = joblib.load('current_scaler_X.pkl')
+            current_scaler_y = joblib.load('current_scaler_y.pkl')
+        except:
+            pass  # 전류 모델이 없어도 앱은 동작해야 함
+        
         # 스케일러 & 회귀모델 로드
         scaler_X = joblib.load('scaler_X.pkl')
         scaler_y = joblib.load('scaler_y.pkl')
         reg_model = joblib.load('final_injector_model.pkl')
         poly = joblib.load('poly_feature_transformer.pkl')
         
-        return trm_model, scaler_X, scaler_y, reg_model, poly, True
+        return trm_model, scaler_X, scaler_y, reg_model, poly, current_model, current_scaler_X, current_scaler_y, True
     except Exception as e:
         st.error(f"모델 로드 오류: {e}")
-        return None, None, None, None, None, False
+        return None, None, None, None, None, None, None, None, False
 
-trm_model, scaler_X, scaler_y, reg_model, poly, loaded = load_resources()
+trm_model, scaler_X, scaler_y, reg_model, poly, current_model, current_scaler_X, current_scaler_y, loaded = load_resources()
 
 # ---------------------------------------------------------
 # 3. 입력 데이터 처리 로직 (핵심)
 # ---------------------------------------------------------
+# AI 모델을 사용한 전류 파형 예측
+def predict_current_waveform(duration_us, total_points=1300):
+    """AI 모델을 사용하여 ET로부터 전류 파형 예측"""
+    if current_model is None or current_scaler_X is None or current_scaler_y is None:
+        return None, None
+    
+    try:
+        device = torch.device('cpu')
+        
+        # 입력 데이터 준비 (ET만 사용)
+        input_meta = np.array([[duration_us]])  # (1, 1)
+        input_scaled = current_scaler_X.transform(input_meta)
+        input_tensor = torch.tensor(input_scaled, dtype=torch.float32).to(device)
+        
+        # 예측
+        with torch.no_grad():
+            output_tensor = current_model(input_tensor)
+        
+        # Inverse transform
+        output_scaled = output_tensor.cpu().numpy()  # (1, 1300)
+        output_unscaled = current_scaler_y.inverse_transform(output_scaled.reshape(-1, 1)).reshape(output_scaled.shape)
+        current_waveform = np.maximum(output_unscaled[0], 0)  # 음수 제거
+        
+        time_axis = np.linspace(-0.5, 6.0, total_points)
+        return time_axis, current_waveform
+    except Exception as e:
+        st.error(f"전류 파형 예측 오류: {e}")
+        return None, None
+
 # [수정됨] 사용자 피드백 반영: Peak -> Direct Drop -> Hold -> Hysteresis
 def generate_realistic_waveform(duration_us, total_points=1300):
     time = np.linspace(-0.5, 6.0, total_points)
@@ -249,7 +340,11 @@ if not loaded:
 
 # 사이드바
 st.sidebar.header("🎛️ Input Source")
-input_mode = st.sidebar.radio("Select Input Mode", ["Simulation (Hysteresis)", "Upload Real File (.lvm)"])
+input_mode = st.sidebar.radio("Select Input Mode", [
+    "AI Prediction (ET → Current)",
+    "Simulation (Hysteresis)",
+    "Upload Real File (.lvm)"
+])
 
 pressure = st.sidebar.slider("Rail Pressure (bar)", 100, 350, 300, 10)
 
@@ -257,13 +352,25 @@ current_wave = None
 time_axis = None
 duration_val = 0
 
-# [로직 분기 1] 시뮬레이션 모드
-if input_mode == "Simulation (Hysteresis)":
+# [로직 분기 1] AI 예측 모드
+if input_mode == "AI Prediction (ET → Current)":
+    duration_val = st.sidebar.slider("Energizing Time (us)", 250, 5000, 2500, 50)
+    time_axis, current_wave = predict_current_waveform(duration_val)
+    if current_wave is None:
+        st.sidebar.warning("⚠️ 전류 파형 예측 모델이 없습니다. 수동 시뮬레이션 모드를 사용하거나 모델을 학습해주세요.")
+        # Fallback to manual simulation
+        time_axis, current_wave = generate_realistic_waveform(duration_val)
+        st.sidebar.caption("⚠️ 수동 시뮬레이션 모드로 전환됨")
+    else:
+        st.sidebar.success(f"✅ AI 예측: P={pressure}bar, ET={duration_val}us")
+
+# [로직 분기 2] 시뮬레이션 모드
+elif input_mode == "Simulation (Hysteresis)":
     duration_val = st.sidebar.slider("Energizing Time (us)", 250, 5000, 2500, 50)
     time_axis, current_wave = generate_realistic_waveform(duration_val)
     st.sidebar.caption("✅ Peak -> Fast Drop -> Hysteresis 패턴 적용됨")
 
-# [로직 분기 2] 파일 업로드 모드
+# [로직 분기 3] 파일 업로드 모드
 else:
     uploaded_file = st.sidebar.file_uploader("Upload Current Data", type=['lvm', 'txt', 'csv'])
     if uploaded_file is not None:
@@ -321,7 +428,8 @@ final_mass = np.sum(output_hybrid) * 0.05
 # 6. 시각화
 # ---------------------------------------------------------
 col1, col2, col3 = st.columns(3)
-col1.metric("Input Source", "Real File" if input_mode.startswith("Upload") else "Simulation")
+source_label = "AI Prediction" if input_mode == "AI Prediction (ET → Current)" else ("Real File" if input_mode.startswith("Upload") else "Simulation")
+col1.metric("Input Source", source_label)
 col2.metric("Total Mass (Hybrid)", f"{final_mass:.2f} mg", f"Target: {target_mass:.2f} mg")
 col3.metric("Current Peak", f"{np.max(current_wave):.1f} A", f"Hold: ~6.0 A")
 
@@ -356,7 +464,9 @@ fig.update_yaxes(title_text="Injection Rate (mg/ms)", secondary_y=True)
 st.plotly_chart(fig, use_container_width=True)
 
 # 설명
-if input_mode.startswith("Simulation"):
+if input_mode == "AI Prediction (ET → Current)":
+    st.success("🤖 **AI Prediction Mode:** 실제 측정 데이터로 학습된 모델을 사용하여 전류 파형을 예측합니다. Using **TRM (Transformer-based)** model.")
+elif input_mode.startswith("Simulation"):
     st.info("💡 **Hysteresis Simulation:** Peak(12A) → Drop → Hold(6A) with PWM Ripple applied. Using **TRM (Transformer-based)** model.")
 else:
     st.success("📂 **Real Data Mode:** Processing actual current waveform from the uploaded file. Using **TRM (Transformer-based)** model.")

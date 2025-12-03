@@ -59,4 +59,4 @@ virtual_map = X_virtual.pivot(index='ET_us', columns='Pressure_bar', values='Pre
 # CSV 저장
 virtual_map.to_csv('Virtual_Injection_Map.csv')
 print("\n[완료] 'Virtual_Injection_Map.csv' 파일이 생성되었습니다.")
-print("이 파일은 100bar부터 350bar까지 50bar 간격의 예측 데이터를 포함합니다.")
+print("이 파일은 100bar부터 300bar까지 50bar 간격의 예측 데이터를 포함합니다.")
